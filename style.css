@@ -850,6 +850,62 @@ label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; display: bl
 }
 .no-slot-sub { font-size: 0.9rem; color: rgba(255,255,255,0.3); }
 
+/* ── Excel Import section ─────────────────────────────────── */
+.import-section { }
+
+.import-hint {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+.import-col {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin: 0 2px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+}
+.import-col.vac  { color: var(--vac);  border-color: rgba(255,71,87,0.4);   background: rgba(255,71,87,0.1); }
+.import-col.pac  { color: var(--pac);  border-color: rgba(46,213,115,0.4);  background: rgba(46,213,115,0.1); }
+.import-col.desk { color: var(--desk); border-color: rgba(30,144,255,0.4);  background: rgba(30,144,255,0.1); }
+
+.drop-zone {
+  border: 2px dashed rgba(255,215,0,0.25);
+  border-radius: 14px;
+  padding: 40px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  background: rgba(255,215,0,0.02);
+  margin-bottom: 16px;
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: rgba(255,215,0,0.6);
+  background: rgba(255,215,0,0.05);
+}
+.drop-zone-icon  { font-size: 2.5rem; margin-bottom: 10px; }
+.drop-zone-text  { font-family: 'Orbitron', sans-serif; font-size: 0.82rem; color: var(--text); letter-spacing: 0.06em; }
+.drop-zone-sub   { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+
+.import-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.78rem;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+}
+
 /* ── Mobile timer bar ─────────────────────────────────────── */
 .mobile-timer-bar {
   display: none;

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SelaRNG – Admin</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <canvas id="stars" class="stars-canvas"></canvas>
@@ -61,6 +62,71 @@
         </table>
         <div class="empty-state" id="empty-state" style="display:none">
           No users yet. Add someone to get started!
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Import from Excel -->
+      <div class="section-title">Import Users from Excel / CSV</div>
+
+      <div class="import-section">
+        <p class="import-hint">
+          Upload a <strong>.xlsx</strong> or <strong>.csv</strong> file. Expected columns:
+          <span class="import-col">Name</span>
+          <span class="import-col vac">VAC</span>
+          <span class="import-col pac">PAC</span>
+          <span class="import-col desk">DESK</span>
+          — mark cells <strong>Y</strong> to enable a role.
+        </p>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn btn-ghost" style="font-size:0.8rem" onclick="downloadTemplate()">
+            📥 Download Template
+          </button>
+          <button class="btn btn-ghost" style="font-size:0.8rem" onclick="document.getElementById('xlsx-input').click()">
+            📂 Upload File
+          </button>
+          <input type="file" id="xlsx-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this)">
+        </div>
+
+        <!-- Drop zone -->
+        <div class="drop-zone" id="drop-zone"
+             ondragover="event.preventDefault();this.classList.add('drag-over')"
+             ondragleave="this.classList.remove('drag-over')"
+             ondrop="handleDrop(event)">
+          <div class="drop-zone-icon">📊</div>
+          <div class="drop-zone-text">Drag & drop your Excel or CSV file here</div>
+          <div class="drop-zone-sub">or use the Upload File button above</div>
+        </div>
+
+        <!-- Preview -->
+        <div id="import-preview" style="display:none">
+          <div class="import-preview-header">
+            <span id="import-count-label"></span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:0.82rem;display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="import-mode" value="merge" checked> Add to existing
+              </label>
+              <label style="font-size:0.82rem;display:flex;align-items:center;gap:6px;cursor:pointer">
+                <input type="radio" name="import-mode" value="replace"> Replace all
+              </label>
+            </div>
+          </div>
+          <div class="table-wrap" style="max-height:280px;overflow-y:auto;margin-bottom:16px">
+            <table class="user-table" id="import-table">
+              <thead><tr><th>#</th><th>Name</th><th>Roles</th><th>Status</th></tr></thead>
+              <tbody id="import-tbody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-success" style="padding:10px 24px;font-size:0.85rem" onclick="confirmImport()">
+              ✓ Confirm Import
+            </button>
+            <button class="btn btn-ghost" style="font-size:0.85rem" onclick="cancelImport()">
+              Cancel
+            </button>
+          </div>
         </div>
       </div>
 
@@ -366,6 +432,130 @@
   // ── Util ───────────────────────────────────────────────────
   function escHtml(s) {
     return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── Excel Import ────────────────────────────────────────────
+  let pendingImport = [];
+
+  function isTruthy(v) {
+    return ['Y','YES','1','TRUE','X','✓','✔'].includes(String(v).trim().toUpperCase());
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) parseExcelFile(file);
+  }
+
+  function handleFile(input) {
+    if (input.files[0]) parseExcelFile(input.files[0]);
+    input.value = '';
+  }
+
+  function parseExcelFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        buildPreview(rows);
+      } catch(err) {
+        showToast('Could not read file — check the format');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function buildPreview(rows) {
+    if (rows.length < 2) { showToast('File seems empty'); return; }
+
+    const header = rows[0].map(h => String(h).trim().toUpperCase());
+    const col = name => header.findIndex(h => h === name);
+    const nCol = col('NAME'), vCol = col('VAC'), pCol = col('PAC'), dCol = col('DESK');
+
+    if (nCol < 0) { showToast('Missing "Name" column'); return; }
+
+    const existing = getUsers().map(u => u.name.toLowerCase());
+
+    pendingImport = rows.slice(1)
+      .filter(r => String(r[nCol]).trim())
+      .map(r => {
+        const name  = String(r[nCol]).trim();
+        const roles = [];
+        if (vCol >= 0 && isTruthy(r[vCol])) roles.push('VAC');
+        if (pCol >= 0 && isTruthy(r[pCol])) roles.push('PAC');
+        if (dCol >= 0 && isTruthy(r[dCol])) roles.push('DESK');
+        if (!roles.length) roles.push('DESK');
+        const dupe = existing.includes(name.toLowerCase());
+        return { name, roles, dupe };
+      });
+
+    if (!pendingImport.length) { showToast('No valid rows found'); return; }
+
+    const tbody = document.getElementById('import-tbody');
+    tbody.innerHTML = pendingImport.map((u, i) => `
+      <tr>
+        <td><span class="id-badge">${i + 1}</span></td>
+        <td style="font-weight:600">${escHtml(u.name)}</td>
+        <td>${u.roles.map(r => `<span class="role-pill ${r}">${r}</span>`).join('')}</td>
+        <td>
+          ${u.dupe
+            ? `<span style="color:var(--gold);font-size:0.75rem">⚠ already exists</span>`
+            : `<span style="color:var(--pac);font-size:0.75rem">✓ new</span>`}
+        </td>
+      </tr>`).join('');
+
+    document.getElementById('import-count-label').textContent =
+      `${pendingImport.length} user${pendingImport.length > 1 ? 's' : ''} found`;
+    document.getElementById('import-preview').style.display = 'block';
+    document.getElementById('drop-zone').style.display = 'none';
+    document.getElementById('import-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function confirmImport() {
+    if (!pendingImport.length) return;
+    const mode  = document.querySelector('input[name="import-mode"]:checked').value;
+    const users = mode === 'replace' ? [] : getUsers();
+    const maxId = users.length ? Math.max(...users.map(u => u.id)) : 0;
+    let nextId  = maxId + 1;
+
+    pendingImport.forEach(u => {
+      const existing = users.findIndex(x => x.name.toLowerCase() === u.name.toLowerCase());
+      if (existing >= 0) {
+        users[existing].roles = u.roles; // update roles on duplicate
+      } else {
+        users.push({ id: nextId++, name: u.name, roles: u.roles });
+      }
+    });
+
+    saveUsers(users);
+    cancelImport();
+    renderUsers();
+    renderRespinPanel();
+    renderRosterPreview();
+    showToast(`${pendingImport.length} user${pendingImport.length > 1 ? 's' : ''} imported ✓`);
+    pendingImport = [];
+  }
+
+  function cancelImport() {
+    pendingImport = [];
+    document.getElementById('import-preview').style.display = 'none';
+    document.getElementById('drop-zone').style.display = 'block';
+  }
+
+  function downloadTemplate() {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['Name',   'VAC', 'PAC', 'DESK'],
+      ['Ahmad',  'Y',   'Y',   'Y'   ],
+      ['Benny',  'Y',   'Y',   'Y'   ],
+      ['Chong',  '',    '',    'Y'   ],
+    ]);
+    ws['!cols'] = [{wch:20},{wch:8},{wch:8},{wch:8}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Users');
+    XLSX.writeFile(wb, 'SelaRNG_template.xlsx');
   }
   </script>
 </body>
