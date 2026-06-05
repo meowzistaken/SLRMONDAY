@@ -1,0 +1,899 @@
+/* ============================================================
+   style.css – Selarang Monday Global Styles
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg:      #080818;
+  --bg2:     #0c0c22;
+  --card:    rgba(255,255,255,0.04);
+  --card-hv: rgba(255,255,255,0.07);
+  --gold:    #FFD700;
+  --gold2:   #FFA500;
+  --vac:     #FF4757;
+  --pac:     #2ED573;
+  --desk:    #1E90FF;
+  --text:    #ffffff;
+  --muted:   rgba(255,255,255,0.45);
+  --border:  rgba(255,215,0,0.2);
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Stars Canvas ─────────────────────────────────────────── */
+.stars-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ── Page Wrapper ─────────────────────────────────────────── */
+.page-wrap {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  border-radius: 50px;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+  border: 2px solid transparent;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold2), var(--gold));
+  color: #000;
+  box-shadow: 0 0 24px rgba(255,165,0,0.4), 0 4px 20px rgba(0,0,0,0.4);
+}
+.btn-primary:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 0 40px rgba(255,165,0,0.6), 0 8px 30px rgba(0,0,0,0.4);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+  border-color: rgba(255,255,255,0.2);
+  font-size: 0.75rem;
+  padding: 8px 18px;
+}
+.btn-ghost:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.05);
+}
+
+.btn-danger {
+  background: rgba(255,71,87,0.15);
+  color: var(--vac);
+  border-color: rgba(255,71,87,0.4);
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+.btn-danger:hover { background: rgba(255,71,87,0.3); }
+
+.btn-edit {
+  background: rgba(30,144,255,0.15);
+  color: var(--desk);
+  border-color: rgba(30,144,255,0.4);
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  border-radius: 8px;
+}
+.btn-edit:hover { background: rgba(30,144,255,0.3); }
+
+.btn-success {
+  background: linear-gradient(135deg, #2ED573, #00b09b);
+  color: #000;
+  border: none;
+}
+.btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(46,213,115,0.4); }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  backdrop-filter: blur(12px);
+  transition: border-color 0.3s, background 0.3s;
+}
+.card:hover { background: var(--card-hv); border-color: rgba(255,215,0,0.35); }
+
+/* ── Inputs / Form ────────────────────────────────────────── */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+select {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  width: 100%;
+  transition: border-color 0.2s, background 0.2s;
+  outline: none;
+}
+input:focus, select:focus {
+  border-color: var(--gold);
+  background: rgba(255,215,0,0.05);
+}
+select option { background: #1a1a3e; }
+
+label { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; display: block; }
+
+/* ── Checkbox rows ────────────────────────────────────────── */
+.checkbox-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: all 0.2s;
+  user-select: none;
+}
+.role-check:hover { background: rgba(255,255,255,0.05); }
+.role-check input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+.role-check.vac-check  { --rc: var(--vac);  }
+.role-check.pac-check  { --rc: var(--pac);  }
+.role-check.desk-check { --rc: var(--desk); }
+.role-check:has(input:checked) {
+  border-color: var(--rc);
+  background: rgba(255,255,255,0.06);
+}
+.role-check .rc-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--rc);
+}
+
+/* ── Overlay / Modal ──────────────────────────────────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: #10102a;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px;
+  width: 90%;
+  max-width: 480px;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
+.modal h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  color: var(--gold);
+  margin-bottom: 24px;
+  text-align: center;
+}
+.modal-close {
+  position: absolute;
+  top: 14px; right: 18px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+
+.form-group { margin-bottom: 18px; }
+
+/* ── Admin: User table ────────────────────────────────────── */
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.user-table th {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,215,0,0.2);
+}
+.user-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  vertical-align: middle;
+}
+.user-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.role-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 700;
+  margin: 2px;
+}
+.role-pill.VAC  { background: rgba(255,71,87,0.2);   color: var(--vac);  border: 1px solid rgba(255,71,87,0.4); }
+.role-pill.PAC  { background: rgba(46,213,115,0.2);  color: var(--pac);  border: 1px solid rgba(46,213,115,0.4);}
+.role-pill.DESK { background: rgba(30,144,255,0.2);  color: var(--desk); border: 1px solid rgba(30,144,255,0.4);}
+
+.id-badge {
+  display: inline-block;
+  width: 28px; height: 28px;
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 6px;
+  text-align: center;
+  line-height: 28px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.72rem;
+  color: var(--gold);
+}
+
+/* ── Slot Machine ─────────────────────────────────────────── */
+.slot-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  backdrop-filter: blur(12px);
+  transition: all 0.4s ease;
+}
+.slot-card.locked {
+  opacity: 0.45;
+  border-color: rgba(255,255,255,0.1);
+  animation: locked-pulse 3s ease-in-out infinite;
+}
+
+@keyframes locked-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.3; }
+}
+
+.slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.slot-time {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+.slot-badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.3);
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+
+.reels-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.role-reel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-label-badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 5px 14px;
+  border-radius: 20px;
+}
+.role-label-badge.VAC  { background: rgba(255,71,87,0.2);   color: var(--vac);  border: 1px solid rgba(255,71,87,0.5); }
+.role-label-badge.PAC  { background: rgba(46,213,115,0.2);  color: var(--pac);  border: 1px solid rgba(46,213,115,0.5);}
+.role-label-badge.DESK { background: rgba(30,144,255,0.2);  color: var(--desk); border: 1px solid rgba(30,144,255,0.5);}
+
+/* Reel window – shows 3 items (240px), middle item is winner */
+.reel-window {
+  width: 100%;
+  height: 240px;
+  overflow: hidden;
+  position: relative;
+  border-radius: 12px;
+  background: #000;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Top/bottom fade */
+.reel-window::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to bottom,
+      rgba(0,0,0,0.85)  0%,
+      transparent       28%,
+      transparent       72%,
+      rgba(0,0,0,0.85) 100%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Centre highlight band */
+.reel-window::before {
+  content: '';
+  position: absolute;
+  top: 80px;
+  left: 0; right: 0;
+  height: 80px;
+  border-top: 1px solid rgba(255,215,0,0.35);
+  border-bottom: 1px solid rgba(255,215,0,0.35);
+  background: rgba(255,215,0,0.04);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.reel-track {
+  position: absolute;
+  width: 100%;
+  will-change: transform;
+}
+
+.reel-item {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.55);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: color 0.3s;
+}
+
+.reel-item.winner {
+  color: var(--gold) !important;
+  text-shadow:
+    0 0 10px rgba(255,215,0,0.9),
+    0 0 25px rgba(255,215,0,0.6),
+    0 0 50px rgba(255,165,0,0.3);
+  animation: winner-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes winner-glow {
+  0%, 100% {
+    text-shadow: 0 0 10px rgba(255,215,0,0.9), 0 0 25px rgba(255,215,0,0.6), 0 0 50px rgba(255,165,0,0.3);
+  }
+  50% {
+    text-shadow: 0 0 15px rgba(255,215,0,1), 0 0 40px rgba(255,215,0,0.8), 0 0 70px rgba(255,165,0,0.5);
+  }
+}
+
+/* Pre-spin "???" state */
+.reel-pregame {
+  width: 100%;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: rgba(255,255,255,0.15);
+  letter-spacing: 0.2em;
+  animation: pregame-pulse 1s ease-in-out infinite;
+}
+
+@keyframes pregame-pulse {
+  0%, 100% { color: rgba(255,255,255,0.15); }
+  50%       { color: rgba(255,255,255,0.3); }
+}
+
+/* Locked slot content */
+.locked-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 0;
+}
+.locked-icon  { font-size: 2.5rem; }
+.locked-text  {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+/* Flash overlay on reel when spinning */
+.reel-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255,215,0,0.08);
+  z-index: 4;
+  border-radius: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.reel-flash.active { opacity: 1; }
+
+/* ── Slot card revealed glow ──────────────────────────────── */
+.slot-card.just-revealed {
+  border-color: rgba(255,215,0,0.6);
+  box-shadow: 0 0 30px rgba(255,215,0,0.15), 0 0 60px rgba(255,165,0,0.08);
+}
+
+/* ── Index Page ───────────────────────────────────────────── */
+.landing {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 24px;
+  position: relative;
+}
+
+.landing-admin-btn {
+  position: fixed;
+  top: 24px; right: 24px;
+  z-index: 10;
+}
+
+.landing-logo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  font-weight: 900;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 0 30px rgba(255,215,0,0.5);
+  margin-bottom: 12px;
+  animation: logo-flicker 4s ease-in-out infinite;
+}
+
+@keyframes logo-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96%           { opacity: 0.85; }
+  97%           { opacity: 1; }
+  98%           { opacity: 0.9; }
+}
+
+.landing-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(2rem, 8vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #fff 30%, rgba(255,215,0,0.8) 70%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 16px;
+}
+
+.landing-sub {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin-bottom: 56px;
+  letter-spacing: 0.04em;
+}
+
+.landing-glow-ring {
+  position: absolute;
+  width: 500px; height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,165,0,0.08) 0%, transparent 70%);
+  pointer-events: none;
+  animation: ring-breathe 4s ease-in-out infinite;
+}
+
+@keyframes ring-breathe {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50%       { transform: scale(1.15); opacity: 1; }
+}
+
+/* ── Roster Page ──────────────────────────────────────────── */
+.roster-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 32px;
+  background: rgba(8,8,24,0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,215,0,0.15);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header-center {
+  text-align: center;
+}
+.header-center h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+}
+.header-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+.timer-box {
+  text-align: center;
+  background: rgba(255,215,0,0.06);
+  border: 1px solid rgba(255,215,0,0.2);
+  border-radius: 12px;
+  padding: 10px 20px;
+  min-width: 160px;
+}
+.timer-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.timer-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.08em;
+  text-shadow: 0 0 12px rgba(255,215,0,0.5);
+}
+.timer-sublabel {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+  padding: 28px 28px 60px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.roster-controls {
+  display: flex;
+  justify-content: center;
+  padding: 0 28px 28px;
+}
+
+/* ── Admin Page ───────────────────────────────────────────── */
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px;
+  background: rgba(8,8,24,0.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,215,0,0.15);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.admin-header h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+}
+
+.admin-body {
+  padding: 28px 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,215,0,0.15);
+}
+
+.table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.back-btn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+.back-btn:hover { color: var(--text); }
+
+.divider {
+  height: 1px;
+  background: rgba(255,215,0,0.1);
+  margin: 28px 0;
+}
+
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1a1a3e;
+  border: 1px solid rgba(46,213,115,0.5);
+  color: var(--pac);
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  z-index: 200;
+  transition: transform 0.4s ease;
+  pointer-events: none;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── PIN Overlay ──────────────────────────────────────────── */
+.pin-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pin-box {
+  background: #10102a;
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+}
+.pin-icon { font-size: 3rem; margin-bottom: 16px; }
+.pin-box h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.pin-box p { font-size: 0.85rem; color: var(--muted); margin-bottom: 28px; }
+.pin-input {
+  text-align: center;
+  font-size: 1.5rem;
+  letter-spacing: 0.3em;
+  margin-bottom: 20px;
+}
+.pin-error {
+  color: var(--vac);
+  font-size: 0.8rem;
+  margin-top: 10px;
+  min-height: 20px;
+}
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fade-in 0.4s ease forwards; }
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-in { animation: slide-in 0.5s ease forwards; }
+
+/* ── Single-slot layout ───────────────────────────────────── */
+.single-slot-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 20px 60px;
+  min-height: calc(100vh - 72px);
+}
+
+.single-slot-card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(14px);
+}
+.single-slot-card.just-revealed {
+  border-color: rgba(255,215,0,0.7);
+  box-shadow: 0 0 40px rgba(255,215,0,0.15), 0 0 80px rgba(255,165,0,0.06);
+}
+
+.reveal-footnote {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 20px;
+  letter-spacing: 0.04em;
+}
+
+/* ── Status badge ─────────────────────────────────────────── */
+.status-badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 5px 12px;
+  border-radius: 20px;
+}
+.status-badge.upcoming  { background: rgba(30,144,255,0.12);  color: var(--desk); border: 1px solid rgba(30,144,255,0.4); }
+.status-badge.active    { background: rgba(46,213,115,0.12);  color: var(--pac);  border: 1px solid rgba(46,213,115,0.4);
+                          animation: status-pulse 2s ease-in-out infinite; }
+.status-badge.completed { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid rgba(255,255,255,0.15); }
+
+@keyframes status-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(46,213,115,0); }
+  50%       { box-shadow: 0 0 10px rgba(46,213,115,0.35); }
+}
+
+/* ── No-slot state ────────────────────────────────────────── */
+.no-slot-state {
+  text-align: center;
+  padding: 80px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.no-slot-icon  { font-size: 4rem; }
+.no-slot-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+.no-slot-sub { font-size: 0.9rem; color: rgba(255,255,255,0.3); }
+
+/* ── Mobile timer bar ─────────────────────────────────────── */
+.mobile-timer-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: rgba(255,215,0,0.05);
+  border-bottom: 1px solid rgba(255,215,0,0.12);
+}
+.mtb-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+.mtb-value {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(255,215,0,0.5);
+}
+.mtb-sub {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .roster-header { grid-template-columns: auto 1fr; }
+  .timer-box { display: none; }
+  .mobile-timer-bar { display: flex; }
+  .reels-container { grid-template-columns: 1fr; gap: 16px; }
+  .slots-grid { grid-template-columns: 1fr; padding: 16px; }
+  .admin-body { padding: 16px; }
+  .admin-header { padding: 16px; flex-direction: column; gap: 12px; }
+}
+
+@media (max-width: 360px) {
+  .reel-item { font-size: 1rem; }
+}

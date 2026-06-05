@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selarang Monday – Admin</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="stars" class="stars-canvas"></canvas>
+
+  <!-- ── PIN Overlay ── -->
+  <div class="pin-overlay" id="pin-overlay">
+    <div class="pin-box">
+      <div class="pin-icon">🔐</div>
+      <h2>ADMIN ACCESS</h2>
+      <p>Enter your PIN to continue</p>
+      <input type="password" class="pin-input" id="pin-input"
+             maxlength="8" placeholder="••••"
+             onkeydown="if(event.key==='Enter') submitPin()">
+      <button class="btn btn-primary" style="width:100%" onclick="submitPin()">Unlock</button>
+      <div class="pin-error" id="pin-error"></div>
+      <div style="margin-top:20px">
+        <a href="index.html" class="back-btn" style="justify-content:center;font-size:0.75rem">
+          ← Back to home
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Admin UI (hidden until PIN) ── -->
+  <div class="page-wrap" id="admin-ui" style="display:none">
+    <header class="admin-header">
+      <a href="index.html" class="back-btn">&#8592; Back</a>
+      <h1>🎛 ADMIN PANEL</h1>
+      <button class="btn btn-ghost" onclick="logout()">Lock 🔒</button>
+    </header>
+
+    <div class="admin-body">
+
+      <!-- Add / Edit User section -->
+      <div class="section-title">User Management</div>
+
+      <div style="display:flex; justify-content:flex-end; margin-bottom:16px">
+        <button class="btn btn-primary" style="padding:10px 24px;font-size:0.82rem" onclick="openAddModal()">
+          + Add User
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table class="user-table" id="user-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Eligible Roles</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="user-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="empty-state" style="display:none">
+          No users yet. Add someone to get started!
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Roster preview -->
+      <!-- Respin panel -->
+      <div class="section-title">Current Slot</div>
+      <div id="respin-panel" style="margin-bottom:28px"></div>
+
+      <div class="section-title">Today's Roster Preview</div>
+      <div id="roster-preview" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px"></div>
+
+    </div>
+  </div>
+
+  <!-- ── Add / Edit Modal ── -->
+  <div class="overlay" id="user-modal" style="display:none" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+      <h2 id="modal-title">Add User</h2>
+
+      <input type="hidden" id="edit-id">
+
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="user-name" placeholder="e.g. Ahmad" maxlength="40"
+               onkeydown="if(event.key==='Enter') saveUser()">
+      </div>
+
+      <div class="form-group">
+        <label>Eligible Roles <span style="color:var(--muted);font-size:0.78rem">(select all that apply)</span></label>
+        <div class="checkbox-group">
+          <label class="role-check vac-check">
+            <input type="checkbox" id="role-vac" value="VAC">
+            <span class="rc-label">VAC</span>
+          </label>
+          <label class="role-check pac-check">
+            <input type="checkbox" id="role-pac" value="PAC">
+            <span class="rc-label">PAC</span>
+          </label>
+          <label class="role-check desk-check">
+            <input type="checkbox" id="role-desk" value="DESK">
+            <span class="rc-label">DESK</span>
+          </label>
+        </div>
+        <div id="role-error" style="color:var(--vac);font-size:0.78rem;margin-top:8px;min-height:18px"></div>
+      </div>
+
+      <button class="btn btn-success" style="width:100%;margin-top:8px" onclick="saveUser()">
+        Save User
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Toast ── -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+  <script>
+  // ─────────────────────────────────────────────────────────────
+  //  Admin page logic
+  // ─────────────────────────────────────────────────────────────
+
+  initStars('stars');
+
+  // ── PIN Auth ───────────────────────────────────────────────
+  const SESSION_KEY = 'slr_admin_ok';
+
+  function submitPin() {
+    const pin = document.getElementById('pin-input').value.trim();
+    if (verifyPin(pin)) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('pin-overlay').style.display = 'none';
+      document.getElementById('admin-ui').style.display    = 'block';
+      renderUsers();
+      renderRespinPanel();
+      renderRosterPreview();
+    } else {
+      const el = document.getElementById('pin-error');
+      el.textContent = 'Incorrect PIN. Try again.';
+      document.getElementById('pin-input').value = '';
+      setTimeout(() => el.textContent = '', 2000);
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    document.getElementById('admin-ui').style.display    = 'none';
+    document.getElementById('pin-overlay').style.display = 'flex';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+
+  // Auto-unlock if session is active
+  if (sessionStorage.getItem(SESSION_KEY)) {
+    document.getElementById('pin-overlay').style.display = 'none';
+    document.getElementById('admin-ui').style.display    = 'block';
+    renderUsers();
+    renderRespinPanel();
+    renderRosterPreview();
+  } else {
+    setTimeout(() => document.getElementById('pin-input').focus(), 100);
+  }
+
+  document.getElementById('pin-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitPin();
+  });
+
+  // ── User Table ─────────────────────────────────────────────
+  function renderUsers() {
+    const users  = getUsers();
+    const tbody  = document.getElementById('user-tbody');
+    const empty  = document.getElementById('empty-state');
+
+    if (!users.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><span class="id-badge">${u.id}</span></td>
+        <td style="font-weight:600">${escHtml(u.name)}</td>
+        <td>${u.roles.map(r => `<span class="role-pill ${r}">${r}</span>`).join('')}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-edit" onclick="openEditModal(${u.id})">Edit</button>
+          &nbsp;
+          <button class="btn btn-danger" onclick="deleteUser(${u.id})">Delete</button>
+        </td>
+      </tr>`).join('');
+  }
+
+  // ── Modal helpers ──────────────────────────────────────────
+  function openAddModal() {
+    document.getElementById('modal-title').textContent = 'Add User';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('user-name').value = '';
+    document.getElementById('role-vac').checked  = false;
+    document.getElementById('role-pac').checked  = false;
+    document.getElementById('role-desk').checked = false;
+    document.getElementById('role-error').textContent = '';
+    document.getElementById('user-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('user-name').focus(), 50);
+  }
+
+  function openEditModal(id) {
+    const user = getUsers().find(u => u.id === id);
+    if (!user) return;
+    document.getElementById('modal-title').textContent = 'Edit User';
+    document.getElementById('edit-id').value = id;
+    document.getElementById('user-name').value = user.name;
+    document.getElementById('role-vac').checked  = user.roles.includes('VAC');
+    document.getElementById('role-pac').checked  = user.roles.includes('PAC');
+    document.getElementById('role-desk').checked = user.roles.includes('DESK');
+    document.getElementById('role-error').textContent = '';
+    document.getElementById('user-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('user-name').focus(), 50);
+  }
+
+  function closeModal() {
+    document.getElementById('user-modal').style.display = 'none';
+  }
+
+  function saveUser() {
+    const name = document.getElementById('user-name').value.trim();
+    if (!name) {
+      document.getElementById('role-error').textContent = 'Please enter a name.';
+      document.getElementById('user-name').focus();
+      return;
+    }
+
+    const roles = ['VAC','PAC','DESK'].filter(r =>
+      document.getElementById('role-' + r.toLowerCase()).checked
+    );
+    if (!roles.length) {
+      document.getElementById('role-error').textContent = 'Select at least one role.';
+      return;
+    }
+    document.getElementById('role-error').textContent = '';
+
+    const editId = document.getElementById('edit-id').value;
+    const users  = getUsers();
+
+    if (editId) {
+      const idx = users.findIndex(u => u.id === parseInt(editId));
+      if (idx !== -1) { users[idx].name = name; users[idx].roles = roles; }
+    } else {
+      users.push({ id: getNextUserId(), name, roles });
+    }
+
+    saveUsers(users);
+    closeModal();
+    renderUsers();
+    renderRosterPreview();
+    showToast(editId ? 'User updated ✓' : 'User added ✓');
+  }
+
+  function deleteUser(id) {
+    const user = getUsers().find(u => u.id === id);
+    if (!user) return;
+    if (!confirm(`Remove "${user.name}" from the roster?`)) return;
+    saveUsers(getUsers().filter(u => u.id !== id));
+    renderUsers();
+    renderRosterPreview();
+    showToast('User removed');
+  }
+
+  // ── Respin panel ───────────────────────────────────────────
+  function renderRespinPanel() {
+    const dateStr = getSGTDateStr();
+    const slot    = getCurrentSlot();
+    const panel   = document.getElementById('respin-panel');
+
+    if (!slot) {
+      const h = getSGT().getHours();
+      panel.innerHTML = `<p style="color:var(--muted);font-size:0.85rem">
+        ${h >= 18 ? 'All slots completed for today.' : 'No slot has been revealed yet today.'}
+      </p>`;
+      return;
+    }
+
+    const count = getRespinCount(dateStr, slot.index);
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+                  background:rgba(255,215,0,0.04);border:1px solid rgba(255,215,0,0.15);
+                  border-radius:14px;padding:18px 20px">
+        <div style="flex:1;min-width:180px">
+          <div style="font-size:0.95rem;font-weight:600">
+            Current slot: <span style="color:var(--gold);font-family:'Orbitron',sans-serif;font-size:0.85rem">${slot.label}</span>
+          </div>
+          ${count > 0
+            ? `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">Respun ${count} time${count > 1 ? 's' : ''} today</div>`
+            : `<div style="font-size:0.75rem;color:var(--muted);margin-top:4px">Original draw — not respun</div>`
+          }
+        </div>
+        <button class="btn btn-primary" style="padding:10px 24px;font-size:0.82rem;white-space:nowrap"
+                onclick="respinCurrentSlot()">
+          🎲 &nbsp;Respin This Slot
+        </button>
+      </div>`;
+  }
+
+  // ── Unified respin (works for any slot index) ──────────────
+  function respinSlot(slotIndex) {
+    const dateStr = getSGTDateStr();
+    const slot    = SLOTS[slotIndex];
+    if (!confirm(`Respin ${slot.label}?\n\nThis clears the stored draw and picks new names.`)) return;
+    incrementRespin(dateStr, slotIndex);
+    clearDrawnRoster(dateStr, slotIndex);
+    renderRespinPanel();
+    renderRosterPreview();
+    showToast(`${slot.label} respun ✓`);
+  }
+
+  function respinCurrentSlot() {
+    const slot = getCurrentSlot();
+    if (slot) respinSlot(slot.index);
+  }
+
+  // ── Roster Preview ─────────────────────────────────────────
+  function renderRosterPreview() {
+    const container = document.getElementById('roster-preview');
+    const dateStr   = getSGTDateStr();
+    container.innerHTML = SLOTS.map(slot => {
+      const spinCount = getRespinCount(dateStr, slot.index);
+      const r = generateRoster(dateStr, slot.index, spinCount);
+      return `
+        <div class="card" style="padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px">
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.72rem;color:var(--gold);letter-spacing:0.1em">
+              ${slot.label}
+            </div>
+            <button onclick="respinSlot(${slot.index})"
+                    style="background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.25);
+                           color:var(--gold);border-radius:8px;padding:4px 10px;cursor:pointer;
+                           font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.06em;
+                           white-space:nowrap;transition:background 0.2s"
+                    onmouseover="this.style.background='rgba(255,215,0,0.18)'"
+                    onmouseout="this.style.background='rgba(255,215,0,0.08)'">
+              🎲 ${spinCount > 0 ? `×${spinCount + 1}` : 'RESPIN'}
+            </button>
+          </div>
+          ${['VAC','PAC','DESK'].map(role => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span class="role-pill ${role}">${role}</span>
+              <span style="font-weight:600;font-size:0.92rem">${escHtml(r[role])}</span>
+            </div>`).join('')}
+        </div>`;
+    }).join('');
+  }
+
+  // ── Toast ──────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  // ── Util ───────────────────────────────────────────────────
+  function escHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  </script>
+</body>
+</html>

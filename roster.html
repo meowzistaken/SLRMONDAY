@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selarang Monday – Roster</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="stars" class="stars-canvas"></canvas>
+
+  <div class="page-wrap">
+    <!-- ── Header ── -->
+    <header class="roster-header">
+      <a href="index.html" class="back-btn">&#8592; Back</a>
+      <div class="header-center">
+        <h1>SELARANG MONDAY</h1>
+        <div class="header-date" id="date-display"></div>
+      </div>
+      <div class="timer-box">
+        <div class="timer-label">Next Reveal</div>
+        <div class="timer-value" id="countdown">--:--:--</div>
+        <div class="timer-sublabel" id="next-label"></div>
+      </div>
+    </header>
+
+    <!-- Mobile timer bar -->
+    <div class="mobile-timer-bar">
+      <span class="mtb-label">Next Reveal</span>
+      <span class="mtb-value" id="countdown-mob">--:--:--</span>
+      <span class="mtb-sub" id="next-label-mob"></span>
+    </div>
+
+    <!-- ── Main slot display ── -->
+    <main class="single-slot-wrap">
+      <div id="slot-container"></div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+  // ─────────────────────────────────────────────────────────────
+  //  Roster page – single-slot view with persistent draw storage
+  // ─────────────────────────────────────────────────────────────
+
+  const ITEM_H  = 80;
+  const FILLERS = 32;
+  const SPIN_MS = 3800;
+
+  initStars('stars');
+
+  const dateStr = getSGTDateStr();
+  document.getElementById('date-display').textContent = formatSGTDate();
+
+  // ── Countdown ─────────────────────────────────────────────
+  function tickCountdown() {
+    const { msUntilNext, nextLabel } = getRevealState();
+    const fmt = formatCountdown(msUntilNext);
+    document.getElementById('countdown').textContent     = fmt;
+    document.getElementById('next-label').textContent    = nextLabel || '';
+    document.getElementById('countdown-mob').textContent = fmt;
+    document.getElementById('next-label-mob').textContent = nextLabel || '';
+  }
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
+
+  // ── HTML helpers ───────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function statusMeta(status) {
+    const map = {
+      UPCOMING:  { label: 'UPCOMING',  cls: 'upcoming'  },
+      ACTIVE:    { label: '● ACTIVE',  cls: 'active'    },
+      COMPLETED: { label: 'COMPLETED', cls: 'completed' },
+    };
+    return map[status] || map.UPCOMING;
+  }
+
+  // Static reel: winner pre-centered, no animation
+  function staticReelHTML(name) {
+    return `<div class="reel-track" style="transform:translateY(-${ITEM_H}px)">
+      ${['','', name,'',''].map((n, i) =>
+        `<div class="reel-item${i === 2 ? ' winner' : ''}">${escHtml(n)}</div>`
+      ).join('')}
+    </div>`;
+  }
+
+  // Animated reel: empty track that JS will populate
+  function animatedReelHTML(role) {
+    return `<div class="reel-track" id="track-${role}"></div>`;
+  }
+
+  function buildCard(slot, status, roster, animate) {
+    const sm  = statusMeta(status);
+    const rh  = slot.revealHour, rm = slot.revealMin || 0;
+    const dispH = rh > 12 ? rh - 12 : rh;
+    const revealStr = `${dispH}:${String(rm).padStart(2,'0')} ${rh < 12 ? 'AM' : 'PM'}`;
+
+    const reels = ['VAC','PAC','DESK'].map(role => `
+      <div class="role-reel">
+        <div class="role-label-badge ${role}">${role}</div>
+        <div class="reel-window">
+          <div class="reel-flash" id="flash-${role}"></div>
+          ${animate ? animatedReelHTML(role) : staticReelHTML(roster[role])}
+        </div>
+      </div>`).join('');
+
+    return `
+      <div class="single-slot-card slide-in">
+        <div class="slot-header">
+          <span class="slot-time">${slot.label}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="status-badge ${sm.cls}">${sm.label}</span>
+            <span class="slot-badge">SLOT ${slot.index + 1}</span>
+          </div>
+        </div>
+        <div class="reels-container" style="grid-template-columns:1fr 1fr 1fr">
+          ${reels}
+        </div>
+        <div class="reveal-footnote">Drawn at ${revealStr} SGT · ${dateStr}</div>
+      </div>`;
+  }
+
+  // ── Main render ────────────────────────────────────────────
+  function renderCurrentSlot() {
+    const container = document.getElementById('slot-container');
+    const slot = getCurrentSlot();
+
+    if (!slot) {
+      const afterHours = getSGT().getHours() >= 18;
+      container.innerHTML = `
+        <div class="no-slot-state">
+          <div class="no-slot-icon">${afterHours ? '🌙' : '⏳'}</div>
+          <div class="no-slot-title">${afterHours ? 'All done for today' : 'No slots yet'}</div>
+          <div class="no-slot-sub">${afterHours ? 'Next reveal tomorrow at 6:00 AM SGT' : 'First draw at 6:00 AM SGT'}</div>
+        </div>`;
+      return;
+    }
+
+    const wasStored = !!getDrawnRoster(dateStr, slot.index);
+    const roster    = getOrCreateRoster(dateStr, slot.index); // stores on first call
+    const status    = getSlotStatus(slot);
+    const animate   = !wasStored; // only animate on first draw
+
+    container.innerHTML = buildCard(slot, status, roster, animate);
+
+    if (animate) {
+      const users = getUsers();
+      ['VAC','PAC','DESK'].forEach((role, ri) => {
+        const track = document.getElementById(`track-${role}`);
+        const pool  = users.filter(u => u.roles.includes(role)).map(u => u.name);
+        if (track) animateReel(track, pool, roster[role], ri * 450);
+      });
+    }
+  }
+
+  // ── Slot machine animation ─────────────────────────────────
+  function animateReel(track, pool, winner, delayMs) {
+    const fallback = winner;
+    const items = [];
+    for (let i = 0; i < FILLERS; i++) {
+      items.push(pool.length ? pool[Math.floor(Math.random() * pool.length)] : fallback);
+    }
+    items.push(winner);           // index FILLERS → shown in centre
+    items.push(pool[0] || '');
+    items.push(pool[1] || '');
+
+    const targetY = -(FILLERS - 1) * ITEM_H;
+
+    track.innerHTML = items.map((n, idx) =>
+      `<div class="reel-item${idx === FILLERS ? ' winner' : ''}">${escHtml(n)}</div>`
+    ).join('');
+
+    track.style.transition = 'none';
+    track.style.transform  = 'translateY(0)';
+
+    const flash = track.parentElement.querySelector('.reel-flash');
+
+    setTimeout(() => {
+      if (flash) { flash.classList.add('active'); setTimeout(() => flash.classList.remove('active'), 200); }
+      track.getBoundingClientRect();
+      track.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.02,0.01,0.18,1)`;
+      track.style.transform  = `translateY(${targetY}px)`;
+
+      setTimeout(() => {
+        const card = track.closest('.single-slot-card');
+        if (card) card.classList.add('just-revealed');
+        if (flash) { flash.classList.add('active'); setTimeout(() => flash.classList.remove('active'), 400); }
+      }, SPIN_MS);
+    }, delayMs);
+  }
+
+  // ── Auto-update when a new slot reveals ───────────────────
+  let lastSlotIndex = getCurrentSlot()?.index ?? -1;
+  setInterval(() => {
+    const s = getCurrentSlot();
+    const idx = s?.index ?? -1;
+    if (idx !== lastSlotIndex) {
+      lastSlotIndex = idx;
+      renderCurrentSlot();
+    }
+  }, 10000);
+
+  // Re-render when admin respins from another tab (storage event fires cross-tab)
+  window.addEventListener('storage', e => {
+    if (e.key && e.key.startsWith('slr_respin_')) renderCurrentSlot();
+  });
+
+  // ── Initial render ─────────────────────────────────────────
+  renderCurrentSlot();
+  </script>
+</body>
+</html>
