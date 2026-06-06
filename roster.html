@@ -10,7 +10,6 @@
   <canvas id="stars" class="stars-canvas"></canvas>
 
   <div class="page-wrap">
-    <!-- ── Header ── -->
     <header class="roster-header">
       <a href="index.html" class="back-btn">&#8592; Back</a>
       <div class="header-center">
@@ -24,24 +23,30 @@
       </div>
     </header>
 
-    <!-- Mobile timer bar -->
     <div class="mobile-timer-bar">
       <span class="mtb-label">Next Reveal</span>
       <span class="mtb-value" id="countdown-mob">--:--:--</span>
       <span class="mtb-sub" id="next-label-mob"></span>
     </div>
 
-    <!-- ── Main slot display ── -->
     <main class="single-slot-wrap">
-      <div id="slot-container"></div>
+      <div id="slot-container">
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <div class="loading-label">LOADING ROSTER</div>
+        </div>
+      </div>
     </main>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="db.js"></script>
   <script src="app.js"></script>
   <script>
-  // ─────────────────────────────────────────────────────────────
-  //  Roster page – single-slot view with persistent draw storage
-  // ─────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────
+  //  Roster page
+  // ─────────────────────────────────────────────────────────
 
   const ITEM_H  = 80;
   const FILLERS = 32;
@@ -56,46 +61,31 @@
   function tickCountdown() {
     const { msUntilNext, nextLabel } = getRevealState();
     const fmt = formatCountdown(msUntilNext);
-    document.getElementById('countdown').textContent     = fmt;
-    document.getElementById('next-label').textContent    = nextLabel || '';
-    document.getElementById('countdown-mob').textContent = fmt;
+    document.getElementById('countdown').textContent      = fmt;
+    document.getElementById('next-label').textContent     = nextLabel || '';
+    document.getElementById('countdown-mob').textContent  = fmt;
     document.getElementById('next-label-mob').textContent = nextLabel || '';
   }
   tickCountdown();
   setInterval(tickCountdown, 1000);
 
-  // ── HTML helpers ───────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────
   function escHtml(s) {
     return String(s).replace(/[&<>"']/g, c =>
       ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  function statusMeta(status) {
-    const map = {
-      UPCOMING:  { label: 'UPCOMING',  cls: 'upcoming'  },
-      ACTIVE:    { label: '● ACTIVE',  cls: 'active'    },
-      COMPLETED: { label: 'COMPLETED', cls: 'completed' },
-    };
-    return map[status] || map.UPCOMING;
-  }
-
-  // Static reel: winner pre-centered, no animation
   function staticReelHTML(name) {
     return `<div class="reel-track" style="transform:translateY(-${ITEM_H}px)">
-      ${['','', name,'',''].map((n, i) =>
-        `<div class="reel-item${i === 2 ? ' winner' : ''}">${escHtml(n)}</div>`
+      ${['','',name,'',''].map((n,i)=>
+        `<div class="reel-item${i===2?' winner':''}">${escHtml(n)}</div>`
       ).join('')}
     </div>`;
   }
 
-  // Animated reel: empty track that JS will populate
-  function animatedReelHTML(role) {
-    return `<div class="reel-track" id="track-${role}"></div>`;
-  }
-
   function buildCard(slot, status, roster, animate) {
-    const sm  = statusMeta(status);
-    const rh  = slot.revealHour, rm = slot.revealMin || 0;
+    const sm   = { UPCOMING:{label:'UPCOMING',cls:'upcoming'}, ACTIVE:{label:'● ACTIVE',cls:'active'}, COMPLETED:{label:'COMPLETED',cls:'completed'} }[status];
+    const rh   = slot.revealHour, rm = slot.revealMin || 0;
     const dispH = rh > 12 ? rh - 12 : rh;
     const revealStr = `${dispH}:${String(rm).padStart(2,'0')} ${rh < 12 ? 'AM' : 'PM'}`;
 
@@ -104,7 +94,9 @@
         <div class="role-label-badge ${role}">${role}</div>
         <div class="reel-window">
           <div class="reel-flash" id="flash-${role}"></div>
-          ${animate ? animatedReelHTML(role) : staticReelHTML(roster[role])}
+          ${animate
+            ? `<div class="reel-track" id="track-${role}"></div>`
+            : staticReelHTML(roster[role])}
         </div>
       </div>`).join('');
 
@@ -124,8 +116,37 @@
       </div>`;
   }
 
+  // ── Slot machine animation ─────────────────────────────────
+  function animateReel(track, pool, winner, delayMs) {
+    const items = [];
+    for (let i = 0; i < FILLERS; i++)
+      items.push(pool.length ? pool[Math.floor(Math.random() * pool.length)] : winner);
+    items.push(winner);
+    items.push(pool[0] || '');
+    items.push(pool[1] || '');
+
+    const targetY = -(FILLERS - 1) * ITEM_H;
+    track.innerHTML = items.map((n,i) =>
+      `<div class="reel-item${i===FILLERS?' winner':''}">${escHtml(n)}</div>`).join('');
+    track.style.transition = 'none';
+    track.style.transform  = 'translateY(0)';
+
+    const flash = track.parentElement.querySelector('.reel-flash');
+
+    setTimeout(() => {
+      if (flash) { flash.classList.add('active'); setTimeout(()=>flash.classList.remove('active'), 200); }
+      track.getBoundingClientRect();
+      track.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.02,0.01,0.18,1)`;
+      track.style.transform  = `translateY(${targetY}px)`;
+      setTimeout(() => {
+        track.closest('.single-slot-card')?.classList.add('just-revealed');
+        if (flash) { flash.classList.add('active'); setTimeout(()=>flash.classList.remove('active'), 400); }
+      }, SPIN_MS);
+    }, delayMs);
+  }
+
   // ── Main render ────────────────────────────────────────────
-  function renderCurrentSlot() {
+  async function renderCurrentSlot() {
     const container = document.getElementById('slot-container');
     const slot = getCurrentSlot();
 
@@ -140,76 +161,49 @@
       return;
     }
 
-    const wasStored = !!getDrawnRoster(dateStr, slot.index);
-    const roster    = getOrCreateRoster(dateStr, slot.index); // stores on first call
-    const status    = getSlotStatus(slot);
-    const animate   = !wasStored; // only animate on first draw
+    // Show spinner while fetching
+    container.innerHTML = `<div class="loading-state"><div class="loading-spinner"></div><div class="loading-label">LOADING ROSTER</div></div>`;
 
-    container.innerHTML = buildCard(slot, status, roster, animate);
+    try {
+      const draw      = await dbGetDraw(dateStr, slot.index);
+      const wasStored = !!(draw?.roster);
+      const roster    = wasStored ? draw.roster
+                                  : await getOrCreateRoster(dateStr, slot.index);
+      const status    = getSlotStatus(slot);
 
-    if (animate) {
-      const users = getUsers();
-      ['VAC','PAC','DESK'].forEach((role, ri) => {
-        const track = document.getElementById(`track-${role}`);
-        const pool  = users.filter(u => u.roles.includes(role)).map(u => u.name);
-        if (track) animateReel(track, pool, roster[role], ri * 450);
-      });
+      container.innerHTML = buildCard(slot, status, roster, !wasStored);
+
+      if (!wasStored) {
+        const users = await dbGetUsers();
+        ['VAC','PAC','DESK'].forEach((role, ri) => {
+          const track = document.getElementById(`track-${role}`);
+          const pool  = users.filter(u => u.roles.includes(role)).map(u => u.name);
+          if (track) animateReel(track, pool, roster[role], ri * 450);
+        });
+      }
+    } catch(err) {
+      console.error(err);
+      container.innerHTML = `
+        <div class="no-slot-state">
+          <div class="no-slot-icon">⚠️</div>
+          <div class="no-slot-title">Connection error</div>
+          <div class="no-slot-sub">Could not reach the database. Check your connection.</div>
+        </div>`;
     }
   }
 
-  // ── Slot machine animation ─────────────────────────────────
-  function animateReel(track, pool, winner, delayMs) {
-    const fallback = winner;
-    const items = [];
-    for (let i = 0; i < FILLERS; i++) {
-      items.push(pool.length ? pool[Math.floor(Math.random() * pool.length)] : fallback);
-    }
-    items.push(winner);           // index FILLERS → shown in centre
-    items.push(pool[0] || '');
-    items.push(pool[1] || '');
-
-    const targetY = -(FILLERS - 1) * ITEM_H;
-
-    track.innerHTML = items.map((n, idx) =>
-      `<div class="reel-item${idx === FILLERS ? ' winner' : ''}">${escHtml(n)}</div>`
-    ).join('');
-
-    track.style.transition = 'none';
-    track.style.transform  = 'translateY(0)';
-
-    const flash = track.parentElement.querySelector('.reel-flash');
-
-    setTimeout(() => {
-      if (flash) { flash.classList.add('active'); setTimeout(() => flash.classList.remove('active'), 200); }
-      track.getBoundingClientRect();
-      track.style.transition = `transform ${SPIN_MS}ms cubic-bezier(0.02,0.01,0.18,1)`;
-      track.style.transform  = `translateY(${targetY}px)`;
-
-      setTimeout(() => {
-        const card = track.closest('.single-slot-card');
-        if (card) card.classList.add('just-revealed');
-        if (flash) { flash.classList.add('active'); setTimeout(() => flash.classList.remove('active'), 400); }
-      }, SPIN_MS);
-    }, delayMs);
-  }
-
-  // ── Auto-update when a new slot reveals ───────────────────
+  // ── Auto-refresh when slot changes ────────────────────────
   let lastSlotIndex = getCurrentSlot()?.index ?? -1;
-  setInterval(() => {
-    const s = getCurrentSlot();
+  setInterval(async () => {
+    const s   = getCurrentSlot();
     const idx = s?.index ?? -1;
-    if (idx !== lastSlotIndex) {
-      lastSlotIndex = idx;
-      renderCurrentSlot();
-    }
+    if (idx !== lastSlotIndex) { lastSlotIndex = idx; renderCurrentSlot(); }
   }, 10000);
 
-  // Re-render when admin respins from another tab (storage event fires cross-tab)
-  window.addEventListener('storage', e => {
-    if (e.key && e.key.startsWith('slr_respin_')) renderCurrentSlot();
-  });
+  // ── Realtime: re-render when admin respins ─────────────────
+  dbOnDrawChange(() => renderCurrentSlot());
 
-  // ── Initial render ─────────────────────────────────────────
+  // ── Init ──────────────────────────────────────────────────
   renderCurrentSlot();
   </script>
 </body>

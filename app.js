@@ -1,5 +1,6 @@
 // ============================================================
 // app.js – SelaRNG Shared Logic
+// Data operations are in db.js; this file is pure logic.
 // ============================================================
 
 const SLOTS = [
@@ -15,34 +16,6 @@ const ROLE_META = {
   PAC:  { color: '#2ED573', glow: 'rgba(46,213,115,0.6)',  label: 'PAC'  },
   DESK: { color: '#1E90FF', glow: 'rgba(30,144,255,0.6)',  label: 'DESK' },
 };
-
-// ── Default seed data ──────────────────────────────────────
-const DEFAULT_USERS = [
-  { id: 1, name: 'Ahmad',   roles: ['VAC','PAC','DESK'] },
-  { id: 2, name: 'Benny',   roles: ['VAC','PAC','DESK'] },
-  { id: 3, name: 'Chong',   roles: ['DESK']             },
-  { id: 4, name: 'Darvin',  roles: ['VAC','PAC','DESK'] },
-  { id: 5, name: 'Elfie',   roles: ['DESK']             },
-  { id: 6, name: 'Faizal',  roles: ['VAC','PAC','DESK'] },
-  { id: 7, name: 'Grace',   roles: ['VAC','PAC','DESK'] },
-  { id: 8, name: 'Hakim',   roles: ['DESK']             },
-];
-
-// ── User Storage ───────────────────────────────────────────
-function getUsers() {
-  const raw = localStorage.getItem('slr_users');
-  if (!raw) { saveUsers(DEFAULT_USERS); return [...DEFAULT_USERS]; }
-  return JSON.parse(raw);
-}
-
-function saveUsers(users) {
-  localStorage.setItem('slr_users', JSON.stringify(users));
-}
-
-function getNextUserId() {
-  const u = getUsers();
-  return u.length === 0 ? 1 : Math.max(...u.map(x => x.id)) + 1;
-}
 
 // ── Singapore Time (UTC+8) ─────────────────────────────────
 function getSGT() {
@@ -92,13 +65,14 @@ function shuffleSeeded(arr, rand) {
   return a;
 }
 
-// ── Roster Generation ──────────────────────────────────────
-function generateRoster(dateStr, slotIndex, respinCount) {
-  const users = getUsers();
-  if (!users.length) return { VAC: '—', PAC: '—', DESK: '—' };
+// ── Roster Generation (pure — no DB calls) ─────────────────
+// users: array of user objects from DB
+// respinCount: incremented by admin to change the seed
+function generateRoster(users, dateStr, slotIndex, respinCount) {
+  if (!users || !users.length) return { VAC: '—', PAC: '—', DESK: '—' };
 
-  const spin  = respinCount || 0;
-  const rand  = mulberry32(strHash(`${dateStr}|${slotIndex}|${spin}`));
+  const spin = respinCount || 0;
+  const rand = mulberry32(strHash(`${dateStr}|${slotIndex}|${spin}`));
   const taken = new Set();
 
   function pick(pool) {
@@ -119,44 +93,21 @@ function generateRoster(dateStr, slotIndex, respinCount) {
   };
 }
 
-// ── Drawn roster storage ──────────────────────────────────
-function getDrawnRoster(dateStr, slotIndex) {
-  const raw = localStorage.getItem(`slr_drawn_${dateStr}_${slotIndex}`);
-  return raw ? JSON.parse(raw) : null;
-}
+// ── Shared async: fetch or generate+store the draw ─────────
+async function getOrCreateRoster(dateStr, slotIndex) {
+  const draw = await dbGetDraw(dateStr, slotIndex);
+  if (draw && draw.roster) return draw.roster;          // already stored
 
-function saveDrawnRoster(dateStr, slotIndex, roster) {
-  localStorage.setItem(`slr_drawn_${dateStr}_${slotIndex}`, JSON.stringify(roster));
-}
-
-function clearDrawnRoster(dateStr, slotIndex) {
-  localStorage.removeItem(`slr_drawn_${dateStr}_${slotIndex}`);
-}
-
-// ── Respin counter (admin override) ───────────────────────
-function getRespinCount(dateStr, slotIndex) {
-  return parseInt(localStorage.getItem(`slr_respin_${dateStr}_${slotIndex}`) || '0');
-}
-
-function incrementRespin(dateStr, slotIndex) {
-  localStorage.setItem(`slr_respin_${dateStr}_${slotIndex}`,
-    getRespinCount(dateStr, slotIndex) + 1);
-}
-
-// Generate once and store; return stored copy on every subsequent call.
-// Includes respin count in seed so admin overrides produce different names.
-function getOrCreateRoster(dateStr, slotIndex) {
-  const stored = getDrawnRoster(dateStr, slotIndex);
-  if (stored) return stored;
-  const roster = generateRoster(dateStr, slotIndex, getRespinCount(dateStr, slotIndex));
-  saveDrawnRoster(dateStr, slotIndex, roster);
+  const users      = await dbGetUsers();
+  const respinCount = draw?.respin_count || 0;
+  const roster     = generateRoster(users, dateStr, slotIndex, respinCount);
+  await dbSaveDraw(dateStr, slotIndex, roster, respinCount);
   return roster;
 }
 
 // ── Current slot helpers ───────────────────────────────────
 function getCurrentSlot() {
   const sgt = getSGT();
-  // After 6 PM all shifts are done — nothing to display
   if (sgt.getHours() >= 18) return null;
   const nowMs = sgt.getHours() * 3600000 + sgt.getMinutes() * 60000
               + sgt.getSeconds() * 1000   + sgt.getMilliseconds();
@@ -175,31 +126,22 @@ function getSlotStatus(slot) {
 // ── Reveal State & Countdown ───────────────────────────────
 function getRevealState() {
   const sgt   = getSGT();
-  const nowMs = sgt.getHours() * 3600000
-              + sgt.getMinutes() * 60000
-              + sgt.getSeconds() * 1000
-              + sgt.getMilliseconds();
+  const nowMs = sgt.getHours() * 3600000 + sgt.getMinutes() * 60000
+              + sgt.getSeconds() * 1000   + sgt.getMilliseconds();
 
-  function slotRevealMs(s) {
-    return s.revealHour * 3600000 + (s.revealMin || 0) * 60000;
-  }
+  function slotRevealMs(s) { return s.revealHour * 3600000 + (s.revealMin || 0) * 60000; }
 
   const revealed = SLOTS.filter(s => nowMs >= slotRevealMs(s));
   const next     = SLOTS.find(s  => nowMs <  slotRevealMs(s));
 
-  let msUntilNext;
-  let nextLabel;
+  let msUntilNext, nextLabel;
   if (next) {
     msUntilNext = slotRevealMs(next) - nowMs;
     nextLabel   = next.label;
   } else {
-    // All revealed — next is tomorrow at 6:00 AM
-    const tomorrowRevealMs = (24 + SLOTS[0].revealHour) * 3600000
-                           + (SLOTS[0].revealMin || 0) * 60000;
-    msUntilNext = tomorrowRevealMs - nowMs;
+    msUntilNext = (24 + SLOTS[0].revealHour) * 3600000 + (SLOTS[0].revealMin || 0) * 60000 - nowMs;
     nextLabel   = 'Tomorrow ' + SLOTS[0].label;
   }
-
   return { revealed, next, msUntilNext, nextLabel };
 }
 
@@ -222,22 +164,14 @@ function initStars(canvasId) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-
-  function resize() {
-    canvas.width  = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   resize();
   window.addEventListener('resize', resize);
-
   const stars = Array.from({ length: 220 }, () => ({
-    x: Math.random(),
-    y: Math.random(),
+    x: Math.random(), y: Math.random(),
     r: Math.random() * 1.4 + 0.2,
-    a: Math.random(),
-    da: (Math.random() - 0.5) * 0.008,
+    a: Math.random(), da: (Math.random() - 0.5) * 0.008,
   }));
-
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     stars.forEach(s => {
